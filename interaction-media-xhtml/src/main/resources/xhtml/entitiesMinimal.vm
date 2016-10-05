@@ -1,4 +1,4 @@
-<!--
+#*
   #%L
   interaction-media-xhtml
   %%
@@ -17,7 +17,9 @@
   You should have received a copy of the GNU Affero General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
   #L%
-  -->
+*#
 		<ul>
-			<li a:foreach="entityResources" a:as="entityResource">%{entityResource.entityResourceString}</li>
+#foreach( $entityResource in $entityResources )
+			<li>${entityResource.getEntityResourceString()}</li>
+#end
 		</ul>

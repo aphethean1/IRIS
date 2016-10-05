@@ -101,6 +101,8 @@ public class TestCommandHelper {
 			InteractionContext ctx = createInteractionContext("MyEntity", "123");
 			String prop = CommandHelper.getViewActionProperty(ctx, "filter");
 			assertEquals("customer eq '123'", prop);
+			String propSelect = CommandHelper.getViewActionProperty(ctx, "select");
+            assertEquals("'123'", propSelect);
 		}
 		catch(Exception e) {
 			fail(e.getMessage());
@@ -233,6 +235,7 @@ public class TestCommandHelper {
 		pathParams.add("id", id);
 		Properties properties = new Properties();
 		properties.put("filter", "customer eq '{id}'");
+		properties.put("select", "'{id}'");
 		when(resourceState.getViewAction()).thenReturn(new Action("GETEntitiesCommand", Action.TYPE.VIEW, properties));
 		
         InteractionContext ctx = new InteractionContext(mock(UriInfo.class), mock(HttpHeaders.class), pathParams, mock(MultivaluedMap.class), resourceState, mock(Metadata.class));

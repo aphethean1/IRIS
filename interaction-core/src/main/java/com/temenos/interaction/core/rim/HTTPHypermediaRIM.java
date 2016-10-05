@@ -464,7 +464,6 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel {
         assert (ctx != null);
 
         ResourceState currentState = ctx.getCurrentState();
-        List<Transition> autoTransitions = getTransitions(ctx, currentState, Transition.AUTO);
         StatusType status = null;
 
         switch (result) {
@@ -504,7 +503,7 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel {
                             status = Status.NOT_MODIFIED;
                         } else if (!redirectTransitions.isEmpty()) {
                         	status = Status.SEE_OTHER;
-                        } else if (ctx.getResource() == null) {
+                        } else if (currentState.getTransitions().isEmpty() && ctx.getResource() == null) {
                         	status = Status.NO_CONTENT;
                         } else {
                         	status = Status.OK;
@@ -514,14 +513,14 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel {
                     // TODO need to add support for differed create (ACCEPTED)
                     if (result == Result.SUCCESS) {
                     	/*
-                    	 * attempt to maintain some backward compatibility.  Several RIMs in the 'wild'
-                    	 * have returned a CREATED response when an auto transition occurs.  
-                    	 * e.g. 'new' resources would often auto transition to the created entity and that
-                    	 * was signalling the 201 CREATED response
-                    	 */
+                    	 * use this condition to attempt to maintain some backward compatibility.  
+                    	 * Several RIMs in the 'wild' have returned a CREATED response when an 
+                    	 * auto transition occurs.  e.g. 'new' resources would often auto transition
+                    	 * to the created entity and that was signalling the 201 CREATED response
                         if (!autoTransitions.isEmpty() && ctx.getResource() != null) {
                             status = Status.CREATED;
-                        } else if (autoTransitions.size() == 0 && ctx.getResource() == null) {
+                    	 */
+                       	if (currentState.getTransitions().isEmpty() && ctx.getResource() == null) {
                             status = Status.NO_CONTENT;
                         } else {
                             status = Status.OK;
@@ -534,7 +533,7 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel {
                  * transaction)
                  */
                 	if (result == Result.SUCCESS) {
-                        if (autoTransitions.size() == 0 && ctx.getResource() == null) {
+                        if (currentState.getTransitions().isEmpty() && ctx.getResource() == null) {
                             status = Status.NO_CONTENT;
                         } else {
                             status = Status.OK;
@@ -638,8 +637,6 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel {
         } else if (status.equals(HttpStatusTypes.METHOD_NOT_ALLOWED)) {
             assert (interactions != null);
             responseBuilder = HeaderHelper.allowHeader(responseBuilder, interactions);
-        } else if (status.equals(Response.Status.NO_CONTENT)) {
-            responseBuilder = HeaderHelper.allowHeader(responseBuilder, interactions);
         } else if (status.equals(Response.Status.SEE_OTHER)) {
             ResourceState currentState = ctx.getCurrentState();
             Object entity = null;
@@ -671,29 +668,9 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel {
                 Link target = (!links.isEmpty()) ? links.iterator().next() : null;
                 responseBuilder = setLocationHeader(responseBuilder, target.getHref(), null);
             }
-        } else if (status.equals(Response.Status.CREATED)) {
-            ResourceState currentState = ctx.getCurrentState();
-            if (currentState.getAllTargets() != null && currentState.getAllTargets().size() > 0) {
-            	LOGGER.warn("A pseudo state that creates a new resource SHOULD contain an auto transition to that new resource");
-            }
-            if(!ignoreAutoTransitions){
-                List<Transition> autoTransitions = getTransitions(ctx, currentState, Transition.AUTO);
-                if (!autoTransitions.isEmpty()) {
-                    assert (resource instanceof EntityResource) : "Must be an EntityResource as we have created a new resource";
-                    ResponseWrapper autoResponse = resolveAutomaticTransitions(headers, ctx, responseBuilder, currentState, autoTransitions);
-                    responseBuilder = setLocationHeader(responseBuilder, autoResponse.getSelfLink().getHref(), autoResponse.getRequestParameters());
-                    if (autoResponse.getResponse().getEntity() != null) {
-                        resource = (RESTResource) ((GenericEntity<?>) autoResponse.getResponse().getEntity()).getEntity();
-                    }
-                }
-            }
-            assert (resource != null);
-            responseBuilder.entity(resource.getGenericEntity());
-            responseBuilder = HeaderHelper.etagHeader(responseBuilder, resource.getEntityTag());
         } else if (status.equals(Response.Status.NOT_MODIFIED)) {
             responseBuilder = HeaderHelper.allowHeader(responseBuilder, interactions);
         } else if (status.getFamily() == Response.Status.Family.SUCCESSFUL) {
-            assert (resource != null);
             ResourceState currentState = ctx.getCurrentState();
             if(!ignoreAutoTransitions){
                 List<Transition> autoTransitions = getTransitions(ctx, currentState, Transition.AUTO);
@@ -798,7 +775,7 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel {
             autoTransitions = getTransitions(ctx, autoResponse.getResolvedState(), Transition.AUTO);
         }while(!autoTransitions.isEmpty() 
             && autoTransition.isType(Transition.AUTO) 
-            && autoResponse.getResponse().getStatus() == Status.OK.getStatusCode());
+            && isSuccessful(autoResponse.getResponse()));
         if (autoResponse.getResponse().getStatus() != Status.OK.getStatusCode()) {
             LOGGER.warn("Auto transition target did not return HttpStatus.OK status [{}]", autoResponse.getResponse().getStatus());
             responseBuilder.status(autoResponse.getResponse().getStatus());
@@ -1098,7 +1075,7 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel {
 
         // TODO add support for OPTIONS /resource/* which will provide
         // information about valid interactions for any entity
-        return buildResponse(headers, ctx.getPathParameters(), Status.NO_CONTENT, null, getInteractions(), null, false);
+        return buildResponse(headers, ctx.getPathParameters(), Status.NO_CONTENT, null, getInteractions(), ctx, false, true);
     }
 
     /**

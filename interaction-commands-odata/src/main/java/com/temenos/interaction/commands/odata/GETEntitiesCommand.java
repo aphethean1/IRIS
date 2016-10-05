@@ -112,7 +112,14 @@ public class GETEntitiesCommand extends AbstractODataCommand implements Interact
 		String orderBy = queryParams.getFirst("$orderby");
 		String skipToken = queryParams.getFirst("$skiptoken");
 		String expand = queryParams.getFirst("$expand");
-		String select = queryParams.getFirst("$select");
+		String actionSelect = CommandHelper.getViewActionProperty(ctx, "select");
+        String select = queryParams.getFirst("$select");
+        
+        if (select == null 
+                && actionSelect != null && !actionSelect.isEmpty()
+                && !actionSelect.contains("{") && !actionSelect.contains("}")) {
+            select = actionSelect;
+        }
 		
 		Map<String, String> customOptions = CommandHelper.populateCustomOptionsMap(ctx);
 		

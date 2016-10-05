@@ -23,9 +23,11 @@ package com.temenos.interaction.media.odata.xml.atom;
 
 
 
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -64,10 +66,6 @@ import javax.ws.rs.core.Request;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
-
-import com.temenos.interaction.core.hypermedia.LinkGenerator;
-import com.temenos.interaction.core.hypermedia.LinkGeneratorImpl;
-import com.temenos.interaction.core.hypermedia.MethodNotAllowedException;
 
 import org.custommonkey.xmlunit.Diff;
 import org.custommonkey.xmlunit.DifferenceListener;
@@ -112,6 +110,9 @@ import com.temenos.interaction.core.hypermedia.Action;
 import com.temenos.interaction.core.hypermedia.CollectionResourceState;
 import com.temenos.interaction.core.hypermedia.EntityTransformer;
 import com.temenos.interaction.core.hypermedia.Link;
+import com.temenos.interaction.core.hypermedia.LinkGenerator;
+import com.temenos.interaction.core.hypermedia.LinkGeneratorImpl;
+import com.temenos.interaction.core.hypermedia.MethodNotAllowedException;
 import com.temenos.interaction.core.hypermedia.ResourceState;
 import com.temenos.interaction.core.hypermedia.ResourceStateMachine;
 import com.temenos.interaction.core.hypermedia.Transformer;
@@ -1515,6 +1516,9 @@ public class TestAtomXMLProvider {
 
 		//Make sure the response is atom+xml
 		assertEquals(MediaType.APPLICATION_ATOM_XML, httpHeaders.getFirst(HttpHeaders.CONTENT_TYPE));
+		
+		//content length must be greater than zero
+		assertThat(Integer.parseInt((String)httpHeaders.getFirst(HttpHeaders.CONTENT_LENGTH)), greaterThan(0));
 	}
 		
 	@Test

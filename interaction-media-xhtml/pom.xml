@@ -56,10 +56,11 @@
 
 	<dependencies>
         <dependency>
-            <groupId>com.googlecode.cambridge</groupId>
-            <artifactId>cambridge-core</artifactId>
-            <version>1.0</version>
+            <groupId>org.apache.velocity</groupId>
+            <artifactId>velocity</artifactId>
+            <version>1.7</version>
         </dependency>
+
         <!-- This provider can also accept and transform OEntity objects into HAL -->
         <dependency>
             <groupId>org.odata4j</groupId>

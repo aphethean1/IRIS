@@ -82,7 +82,7 @@ public class CreateEntityCommand extends AbstractODataCommand implements Interac
 		}
 		
 		ctx.setResource(CommandHelper.createEntityResource(oEntity));
-		return Result.SUCCESS;
+		return Result.CREATED;
 	}
 
 }

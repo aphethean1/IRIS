@@ -425,6 +425,8 @@ public class SpringDSLResourceStateProvider implements ResourceStateProvider, Dy
 						foundFile = path;
 						result = new FileSystemXmlApplicationContext( new String[] { path });
 					}
+				} else {
+					logger.error("Invalid IRIS resource directory path: " + irisResourceDir.getAbsolutePath());
 				}
 			}
 

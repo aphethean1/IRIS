@@ -262,11 +262,13 @@ public class AtomXMLProvider implements MessageBodyReader<RESTResource>, Message
             LOGGER.error("Accepted object for writing in isWriteable, but type not supported in writeTo method");
             throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
         }
-        IOUtils.copy(new ByteArrayInputStream(buffer.toByteArray()), entityStream);
+        
         //Set response headers
-		if(httpHeaders != null) {
-			httpHeaders.putSingle(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_ATOM_XML);		//Workaround for https://issues.apache.org/jira/browse/WINK-374
-		}
+        if(httpHeaders != null) {
+            httpHeaders.putSingle(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_ATOM_XML);        //Workaround for https://issues.apache.org/jira/browse/WINK-374
+            httpHeaders.putSingle(HttpHeaders.CONTENT_LENGTH, Integer.toString(buffer.size()));
+        }
+        IOUtils.copy(new ByteArrayInputStream(buffer.toByteArray()), entityStream);
 	}
 	
 	public RESTResource processLinks(RESTResource restResource) {

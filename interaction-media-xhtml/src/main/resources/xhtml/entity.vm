@@ -1,0 +1,50 @@
+#*
+  #%L
+  interaction-media-xhtml
+  %%
+  Copyright (C) 2012 - 2013 Temenos Holdings N.V.
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  #L%
+*#
+		<table id="tableT1">
+			<thead>
+				<tr>
+					<th scope="col">${entityResource.getResource().getEntityName()}</th>
+				</tr>
+			</thead>
+			<tbody>
+#foreach( $prop in $entityResource.getEntityPropertyMap().entrySet() )
+				<tr>
+#if( $prop.getValue().class.getName() == 'com.temenos.interaction.core.entity.EntityProperties' )
+					<div>
+#foreach( $prop2 in $prop.getValue().getProperties().entrySet() )
+						<tr>
+							<td>${prop.getKey()}</td><td>${prop2.getKey()}</td><td><div contenteditable="true">${prop2.getValue().getValue()}</div></td>
+						</tr>
+#end
+					</div>
+#end
+#if ( $prop.getValue().class.getName() != 'com.temenos.interaction.core.entity.EntityProperties' )
+					<div>
+						<td>${prop.getKey()}</td><td><div contenteditable="true">${prop.getValue()}</div></td>
+					</div>
+#end
+				</tr>
+#end
+			</tbody>
+		</table>
+#set( $Q = "'" )
+#set( $quotedTerm = "${Q}$!{entityResource.getEntityUpdateLink().getHref()}${Q}")
+		<button onclick="updateEntity(${quotedTerm})">Save</button>

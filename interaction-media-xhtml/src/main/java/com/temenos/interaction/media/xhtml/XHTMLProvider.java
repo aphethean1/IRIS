@@ -22,59 +22,39 @@ package com.temenos.interaction.media.xhtml;
  */
 
 
-import java.beans.BeanInfo;
-import java.beans.IntrospectionException;
-import java.beans.Introspector;
-import java.beans.PropertyDescriptor;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.ws.rs.Consumes;
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
-import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
-import javax.ws.rs.ext.Provider;
-
+import com.temenos.interaction.core.entity.*;
+import com.temenos.interaction.core.hypermedia.Link;
+import com.temenos.interaction.core.resource.CollectionResource;
+import com.temenos.interaction.core.resource.EntityResource;
+import com.temenos.interaction.core.resource.RESTResource;
+import com.temenos.interaction.core.resource.ResourceTypeHelper;
+import org.apache.velocity.exception.ParseErrorException;
+import org.apache.velocity.exception.VelocityException;
 import org.odata4j.core.OEntity;
 import org.odata4j.core.OProperty;
 import org.odata4j.edm.EdmDataServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cambridge.Template;
-import cambridge.TemplateEvaluationException;
-import cambridge.TemplateFactory;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.*;
+import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.MessageBodyWriter;
+import javax.ws.rs.ext.Provider;
+import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.io.*;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
+import java.util.*;
 
-import com.temenos.interaction.core.entity.Entity;
-import com.temenos.interaction.core.entity.EntityMetadata;
-import com.temenos.interaction.core.entity.EntityProperty;
-import com.temenos.interaction.core.entity.GenericError;
-import com.temenos.interaction.core.entity.Metadata;
-import com.temenos.interaction.core.hypermedia.Link;
-import com.temenos.interaction.core.resource.CollectionResource;
-import com.temenos.interaction.core.resource.EntityResource;
-import com.temenos.interaction.core.resource.RESTResource;
-import com.temenos.interaction.core.resource.ResourceTypeHelper;
+import static com.temenos.interaction.media.xhtml.VelocityTemplateEngine.VmTemplate;
 
 @Provider
 @Consumes({MediaType.APPLICATION_XHTML_XML})
@@ -85,7 +65,7 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 	@Context
 	private UriInfo uriInfo;
 	private Metadata metadata = null;
-	private XHTMLTemplateFactories templateFactories = new XHTMLTemplateFactories();
+	private VelocityTemplateEngine templateEngine = new VelocityTemplateEngine();
 	
 	public XHTMLProvider(Metadata metadata) {
 		this.metadata = metadata;
@@ -127,11 +107,26 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 		try {
 			renderResource(writer, resource, mediaType, type, genericType);
 			writer.flush();
-		} catch(TemplateEvaluationException tee) {
-			String msg = "Failed to render XHTML response on tag " + tee.getTagName() + " [line " + tee.getLine() + ", column " + tee.getColumn() + "]";
-			logger.error(msg + ": ", tee);
+		}
+		catch (ParseErrorException pee) {
+			String msg = String.format("Failed to render XHTML response (Apache Velocity error).\n" +
+					"Message: %s\n" +
+					"TemplateName: %s\n" +
+					"LineNumber: %d\n" +
+					"InvalidSyntax: %s",
+					pee.getMessage(),
+					pee.getTemplateName(),
+					pee.getLineNumber(),
+					pee.getInvalidSyntax());
+			logger.error(msg, pee);
+			throw new WebApplicationException(createErrorResponse(mediaType, "Failed to render XHTML response"));
+		}
+		catch(VelocityException ve) {
+			String msg = "Failed to render XHTML response: ";
+			logger.error(msg, ve);
 			throw new WebApplicationException(createErrorResponse(mediaType, msg));
-		} catch(Exception e) {
+		}
+		catch(Exception e) {
 			logger.error("Failed to render XHTML response: ", e);
 			throw new WebApplicationException(createErrorResponse(mediaType, e.getMessage()));
 		}
@@ -148,6 +143,8 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 	 */
 	@SuppressWarnings("unchecked")
 	private void renderResource(Writer writer, RESTResource resource, MediaType mediaType, Class<?> type, Type genericType) throws Exception {
+		Map<String, Object> properties = new HashMap<>();
+
 		// create the xhtml resource
 		if (resource.getGenericEntity() != null) {
 			RESTResource rResource = (RESTResource) resource.getGenericEntity().getEntity();
@@ -157,33 +154,33 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 			}
 
 			//Render header
-			Template template = getTemplate(mediaType.equals(MediaType.APPLICATION_XHTML_XML_TYPE) ? XHTMLTemplateFactories.TEMPLATE_HEADER_MINIMAL : XHTMLTemplateFactories.TEMPLATE_HEADER );
-			template.setProperty("siteName", uriInfo != null && uriInfo.getPath() != null ? uriInfo.getPath() : "");
-			template.setProperty("resourceLinks", links);
-			template.printTo(writer);
-			
+			properties.put("siteName", (uriInfo != null && uriInfo.getPath() != null) ? uriInfo.getPath() : "");
+			properties.put("resourceLinks", links);
+			templateEngine.merge(writer, properties,
+					MediaType.APPLICATION_XHTML_XML_TYPE.equals(mediaType) ? VmTemplate.HEADER_MINIMAL.get() : VmTemplate.HEADER.get());
+
 			//links are already in header - render for text/html
-			if (mediaType.equals(MediaType.TEXT_HTML_TYPE)) {
-				template = getTemplate(XHTMLTemplateFactories.TEMPLATE_RESOURCE_LINKS);
-				template.setProperty("resourceLinks", links);
-				template.printTo(writer);
+			if (MediaType.TEXT_HTML_TYPE.equals(mediaType)) {
+				templateEngine.merge(writer, properties, VmTemplate.RESOURCE_LINKS.get());
 			}
 			
 			//render data
 			if (ResourceTypeHelper.isType(type, genericType, EntityResource.class)) {
-				template = getTemplate(mediaType.equals(MediaType.APPLICATION_XHTML_XML_TYPE) ? XHTMLTemplateFactories.TEMPLATE_ENTITY_MINIMAL : XHTMLTemplateFactories.TEMPLATE_ENTITY);
 				if (ResourceTypeHelper.isType(type, genericType, EntityResource.class, OEntity.class)) {
 					//OEntity entity resource
 					EntityResource<OEntity> oentityResource = (EntityResource<OEntity>) resource;
 					EntityMetadata entityMetadata = metadata.getEntityMetadata(oentityResource.getEntityName());
-					template.setProperty("entityResource", new EntityResourceWrapperXHTML(entityMetadata, buildFromOEntity(oentityResource)));
-					template.printTo(writer);
+					properties.put("entityResource", new EntityResourceWrapperXHTML(entityMetadata, buildFromOEntity(oentityResource)));
+					templateEngine.merge(writer, properties,
+							MediaType.APPLICATION_XHTML_XML_TYPE.equals(mediaType) ? VmTemplate.ENTITY_MINIMAL.get() : VmTemplate.ENTITY.get());
+
 				} else if (ResourceTypeHelper.isType(type, genericType, EntityResource.class, Entity.class)) {
 					//Entity entity resource
 					EntityResource<Entity> entityResource = (EntityResource<Entity>) resource;
 					EntityMetadata entityMetadata = metadata.getEntityMetadata(entityResource.getEntityName() != null ? entityResource.getEntityName() : entityResource.getEntity().getName());
-					template.setProperty("entityResource", new EntityResourceWrapperXHTML(entityMetadata, buildFromEntity(entityResource)));
-					template.printTo(writer);
+					properties.put("entityResource", new EntityResourceWrapperXHTML(entityMetadata, buildFromEntity(entityResource)));
+					templateEngine.merge(writer, properties,
+							MediaType.APPLICATION_XHTML_XML_TYPE.equals(mediaType) ? VmTemplate.ENTITY_MINIMAL.get() : VmTemplate.ENTITY.get());
 				} else if (ResourceTypeHelper.isType(type, genericType, EntityResource.class, EdmDataServices.class)) {
 					//The resources are shown in the resource links section
 				} else if (ResourceTypeHelper.isType(type, genericType, EntityResource.class, GenericError.class)) {
@@ -196,8 +193,9 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 					EntityResource<Object> entityResource = (EntityResource<Object>) resource;
 					EntityMetadata entityMetadata = metadata.getEntityMetadata(entityResource.getEntityName());
 					if(entityResource.getEntity() != null) {
-						template.setProperty("entityResource", new EntityResourceWrapperXHTML(entityMetadata, buildFromBean(entityResource)));
-						template.printTo(writer);
+						properties.put("entityResource", new EntityResourceWrapperXHTML(entityMetadata, buildFromBean(entityResource)));
+						templateEngine.merge(writer, properties,
+								MediaType.APPLICATION_XHTML_XML_TYPE.equals(mediaType) ? VmTemplate.ENTITY_MINIMAL.get() : VmTemplate.ENTITY.get());
 					}
 				} else {
 					logger.error("Accepted object for writing in isWriteable, but type not supported in writeTo method");
@@ -205,7 +203,6 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 				}
 			}
 			else if (ResourceTypeHelper.isType(type, genericType, CollectionResource.class)) {
-				template = getTemplate(mediaType.equals(MediaType.APPLICATION_XHTML_XML_TYPE) ? XHTMLTemplateFactories.TEMPLATE_ENTITIES_MINIMAL : XHTMLTemplateFactories.TEMPLATE_ENTITIES);
 				if (ResourceTypeHelper.isType(type, genericType, CollectionResource.class, Entity.class)) {
 					//Entity collection resource
 					CollectionResource<Entity> collectionResource = (CollectionResource<Entity>) resource;
@@ -216,9 +213,9 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 					for (EntityResource<Entity> er : entityResources) {
 						entities.add(new EntityResourceWrapperXHTML(entityMetadata, entityPropertyNames, buildFromEntity(er)));
 					}
-					template.setProperty("entitySetName", collectionResource.getEntitySetName());
-					template.setProperty("entityPropertyNames", entityPropertyNames);
-					template.setProperty("entityResources", entities);
+					properties.put("entitySetName", collectionResource.getEntitySetName());
+					properties.put("entityPropertyNames", entityPropertyNames);
+					properties.put("entityResources", entities);
 				} else if(ResourceTypeHelper.isType(type, genericType, CollectionResource.class, OEntity.class)) {
 					//OEntity collection resource
 					CollectionResource<OEntity> collectionResource = ((CollectionResource<OEntity>) resource);
@@ -229,9 +226,9 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 					for (EntityResource<OEntity> er : entityResources) {
 						entities.add(new EntityResourceWrapperXHTML(entityMetadata, entityPropertyNames, buildFromOEntity(er)));
 					}
-					template.setProperty("entitySetName", collectionResource.getEntitySetName());
-					template.setProperty("entityPropertyNames", entityPropertyNames);
-					template.setProperty("entityResources", entities);
+					properties.put("entitySetName", collectionResource.getEntitySetName());
+					properties.put("entityPropertyNames", entityPropertyNames);
+					properties.put("entityResources", entities);
 				} else if (ResourceTypeHelper.isType(type, genericType, CollectionResource.class)) {
 					//JAXB collection resource
 					CollectionResource<Object> collectionResource = (CollectionResource<Object>) resource;
@@ -243,21 +240,22 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 						er.setEntityName(collectionResource.getEntityName());
 						entities.add(new EntityResourceWrapperXHTML(entityMetadata, entityPropertyNames, buildFromBean(er)));
 					}
-					template.setProperty("entitySetName", collectionResource.getEntitySetName());
-					template.setProperty("entityPropertyNames", entityPropertyNames);
-					template.setProperty("entityResources", entities);
+					properties.put("entitySetName", collectionResource.getEntitySetName());
+					properties.put("entityPropertyNames", entityPropertyNames);
+					properties.put("entityResources", entities);
 				} else {
 					logger.error("Accepted object for writing in isWriteable, but type not supported in writeTo method");
 					throw new Exception("Unable to render this resource as an XHTML response.");
 				}
-				template.printTo(writer);
+				templateEngine.merge(writer, properties,
+						MediaType.APPLICATION_XHTML_XML_TYPE.equals(mediaType) ? VmTemplate.ENTITIES_MINIMAL.get() : VmTemplate.ENTITIES.get());
 			} else {
 				logger.error("Accepted object for writing in isWriteable, but type not supported in writeTo method");
 				throw new Exception("Unable to render this resource as an XHTML response.");
 			}
 
 			//Render footer
-			getTemplate(XHTMLTemplateFactories.TEMPLATE_FOOTER).printTo(writer);
+			templateEngine.merge(writer, properties, VmTemplate.FOOTER.get());
 		} else {
 			logger.error("Unable to render empty resource.");
 			throw new Exception("Unable to render this empty resource as an XHTML response.");
@@ -370,21 +368,7 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 	protected void setUriInfo(UriInfo uriInfo) {
 		this.uriInfo = uriInfo;
 	}
-	
-	/*
-	 * Return the specified template factory
-	 */
-	private Template getTemplate(String templateFactoryName) throws WebApplicationException {
-		TemplateFactory tf = templateFactories.getTemplateFactory(templateFactoryName);
-		if(tf != null) {
-			return tf.createTemplate();
-		}
-		else {
-			logger.error("Failed to obtain template factory " + templateFactoryName);
-			throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
-		}
-	}
-	
+
 	/*
 	 * Render an error response
 	 * @param mediaType media type
@@ -393,16 +377,16 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 	 */
 	private Response createErrorResponse(MediaType mediaType, String errorMessage) {
 		ResponseBuilder responseBuilder = Response.status(Response.Status.INTERNAL_SERVER_ERROR);
-		String entity = "";
-		if(mediaType.equals(MediaType.APPLICATION_XHTML_XML_TYPE)) {
-			entity += getTemplate(XHTMLTemplateFactories.TEMPLATE_HEADER_MINIMAL).asString();
+		StringBuilder entity = new StringBuilder("");
+		if (MediaType.APPLICATION_XHTML_XML_TYPE.equals(mediaType)) {
+			entity.append(VmTemplate.HEADER_MINIMAL.toString());
+		} else {
+			entity.append(VmTemplate.HEADER.toString());
 		}
-		else {
-			entity += getTemplate(XHTMLTemplateFactories.TEMPLATE_HEADER).asString();
-		}
-		entity += getErrorMessage(mediaType, errorMessage);
-		entity += getTemplate(XHTMLTemplateFactories.TEMPLATE_FOOTER).asString();
-		responseBuilder.entity(entity);
+		entity.append(getErrorMessage(mediaType, errorMessage));
+		entity.append(VmTemplate.FOOTER.toString());
+
+		responseBuilder.entity(entity.toString());
 		responseBuilder.type(mediaType);
 		return responseBuilder.build();
 	}
@@ -414,11 +398,11 @@ public class XHTMLProvider implements MessageBodyReader<RESTResource>, MessageBo
 	 * @return error response
 	 */
 	private String getErrorMessage(MediaType mediaType, String errorMessage) {
-		if(mediaType.equals(MediaType.APPLICATION_XHTML_XML_TYPE)) {
-			return "<error>" + errorMessage + "</error>";
+		if(MediaType.APPLICATION_XHTML_XML_TYPE.equals(mediaType)) {
+			return "\t\t<error>" + errorMessage + "</error>";
 		}
 		else {
-			return "<div class=\"error\">" + errorMessage + "</div>";
+			return "\t\t<div class=\"error\">" + errorMessage + "</div>";
 		}
 	}
 }

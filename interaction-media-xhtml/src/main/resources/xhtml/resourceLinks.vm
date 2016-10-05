@@ -1,4 +1,4 @@
-<!--
+#*
   #%L
   interaction-media-xhtml
   %%
@@ -17,6 +17,11 @@
   You should have received a copy of the GNU Affero General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
   #L%
-  -->
-	</body>
-</html>
+*#
+#if ( $resourceLinks && !$resourceLinks.isEmpty() )
+        <ul>
+#foreach( $link in $resourceLinks )
+            <li><a href="${link.href}">${link.title}</a></li>
+#end
+        </ul>
+#end

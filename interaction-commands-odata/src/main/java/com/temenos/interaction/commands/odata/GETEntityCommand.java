@@ -117,7 +117,11 @@ public class GETEntityCommand extends AbstractODataCommand implements Interactio
 			filter = filter != null ? filter + " and " + actionFilter : actionFilter;
 		}
 		String expand = queryParams.getFirst("$expand");
+		String actionSelect = CommandHelper.getViewActionProperty(ctx, "select");
 		String select = queryParams.getFirst("$select");
+		if(actionSelect != null && !actionSelect.isEmpty()) {
+		    select = select != null ? select + " and " + actionSelect : actionSelect;
+        }
 		
 		// Capture all query parameters 
 		Map<String, String> customOptions = CommandHelper.populateCustomOptionsMap(ctx);

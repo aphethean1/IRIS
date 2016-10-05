@@ -796,7 +796,7 @@ public class ResourceStateMachine {
 		} else if (resourceEntity instanceof CollectionResource) {
 			collectionResource = (CollectionResource<?>) resourceEntity;
 			// TODO add support for properties on collections
-			LOGGER.warn("Injecting links into a collection, only support simple, non template, links as there are no properties on the collection at the moment");
+			LOGGER.info("Injecting links into a collection, only support simple, non template, links as there are no properties on the collection at the moment");
 		} else if (resourceEntity instanceof MetaDataResource) {
 			// TODO deprecate all resource types apart from item
 			// (EntityResource) and collection (CollectionResource)

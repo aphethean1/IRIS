@@ -900,6 +900,7 @@ public class TestLazyResourceDelegate {
         
         when(interactionsByPath.get(anyString())).thenReturn(methods);
         when(resourceStateMachine.getInteractionByPath()).thenReturn(interactionsByPath);
+        when(resourceStateMachine.determineState(any(Event.class), anyString())).thenReturn(state);
         
         LazyResourceDelegate lazyResourceDelegate = new LazyResourceDelegate(resourceStateMachine,
                 resourceStateProvider, mock(CommandController.class), mock(Metadata.class), "test", "/", mock(HashSet.class));  
