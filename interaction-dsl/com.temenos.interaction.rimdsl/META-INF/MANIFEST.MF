@@ -5,21 +5,24 @@ Bundle-Vendor: IRIS
 Bundle-Version: 0.15.21
 Bundle-SymbolicName: com.temenos.interaction.rimdsl; singleton:=true
 Bundle-ActivationPolicy: lazy
-Require-Bundle: org.eclipse.xtext;visibility:=reexport,
- org.eclipse.xtext.xbase,
- org.eclipse.xtext.generator,
- org.apache.commons.logging;bundle-version="1.0.4";resolution:=optional,
+Require-Bundle: org.eclipse.xtext;bundle-version="[2.11.0,2.12)";visibility:=reexport,
+ org.eclipse.xtext.xbase;bundle-version="[2.11.0,2.12)";resolution:=optional;visibility:=reexport,
+ org.eclipse.xtext.generator;bundle-version="[2.11.0,2.12)";resolution:=optional, org.apache.commons.logging;bundle-version="1.0.4";resolution:=optional,
  org.apache.commons.lang;bundle-version="2.6",
  org.eclipse.emf.codegen.ecore;resolution:=optional,
  org.eclipse.emf.mwe.utils;resolution:=optional,
  org.eclipse.emf.mwe2.launch;resolution:=optional,
- org.eclipse.xtext.util,
+ org.eclipse.xtext.util;bundle-version="[2.11.0,2.12)",
  org.eclipse.emf.ecore,
  org.eclipse.emf.common,
  org.antlr.runtime,
- org.eclipse.xtext.common.types,
+ org.eclipse.xtext.common.types;bundle-version="[2.11.0,2.12)",
  org.objectweb.asm;bundle-version="[5.0.1,6.0.0)";resolution:=optional,
- org.eclipse.xtext.xbase.lib
+ org.eclipse.xtext.xbase.lib;bundle-version="[2.11.0,2.12)",
+ org.eclipse.xtend.lib.macro;bundle-version="[2.11.0,2.12)",
+ org.eclipse.xtend.lib;bundle-version="[2.11.0,2.12)",
+ org.eclipse.xtext.ecore;bundle-version="[2.11.0,2.12)",
+ org.eclipse.xtext.xtext.generator;bundle-version="[2.11.0,2.12)"
 Import-Package: org.apache.log4j,
  org.eclipse.xtext.xbase.lib
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
