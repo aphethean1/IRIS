@@ -42,6 +42,7 @@ import com.temenos.interaction.core.entity.EntityMetadata;
 import com.temenos.interaction.core.entity.Metadata;
 import com.temenos.interaction.core.hypermedia.Link;
 import com.temenos.interaction.core.hypermedia.ResourceState;
+import com.temenos.interaction.core.hypermedia.transition.AutoTransitioner;
 import com.temenos.interaction.core.resource.RESTResource;
 import com.temenos.interaction.core.rim.AcceptLanguageHeaderParser;
 import com.temenos.interaction.core.rim.HTTPHypermediaRIM;
@@ -70,6 +71,7 @@ public class InteractionContext {
 	private ResourceState targetState;
 	private Link linkUsed;
 	private InteractionException exception;
+	private AutoTransitioner autoTransitioner;
 
 	/* Command context */
 	private RESTResource resource;
@@ -119,6 +121,7 @@ public class InteractionContext {
 		this.outQueryParameters.putAll(ctx.outQueryParameters);
 		this.currentState = currentState != null ? currentState : ctx.currentState;
 		this.metadata = ctx.metadata;
+		this.autoTransitioner = ctx.autoTransitioner;
 		
 		this.resource = ctx.resource;
 		this.targetState = ctx.targetState;
@@ -317,6 +320,14 @@ public class InteractionContext {
 	 */
 	public void setException(InteractionException exception) {
 		this.exception = exception;
+	}
+
+	public AutoTransitioner getAutoTransitioner() {
+		return autoTransitioner;
+	}
+
+	public void setAutoTransitioner(AutoTransitioner autoTransitioner) {
+		this.autoTransitioner = autoTransitioner;
 	}
 
 	/**

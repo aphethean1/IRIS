@@ -186,6 +186,7 @@ public class AutoTransitioner {
                 copyParameters(ctx.getPathParameters()),
                 copyParameters(ctx.getQueryParameters()),
                 ctx.getCurrentState());
+        ctxCopy.setAutoTransitioner(this);
         ctxCopy.getResponseHeaders().putAll(ctx.getResponseHeaders());
         return ctxCopy;
     }

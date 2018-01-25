@@ -113,7 +113,6 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel, Expressi
     private final ResourceRequestHandler resourceRequestHandler;
     private final Metadata metadata;
     private final String resourcePath;
-    private AutoTransitioner autoTransitioner;
 
     /**
      * <p>
@@ -344,7 +343,8 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel, Expressi
         assert (event != null);
         InteractionContext ctx = initialCtx;
         StatusType status = Status.NOT_FOUND;
-
+        AutoTransitioner autoTransitioner = ctx.getAutoTransitioner();
+        
         if (action == null) {
             if (event.isUnSafe()) {
                 status = HttpStatusTypes.METHOD_NOT_ALLOWED;
@@ -372,7 +372,7 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel, Expressi
             assert (result != null) : "InteractionCommand must return a result";
             status = determineStatus(headers, event, ctx, result);
             if (status.getFamily() == Response.Status.Family.SUCCESSFUL && autoTransitioner == null) {
-                autoTransitioner = new AutoTransitioner(
+            	autoTransitioner = new AutoTransitioner(
                         ctx,
                         getHypermediaEngine().getTransformer(),
                         commandController,
@@ -384,6 +384,7 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel, Expressi
                 AutoTransitioner.Outcome outcome = autoTransitioner.transition();
                 if(outcome.isSuccessful()) {
                     ctx = outcome.getInteractionContext();
+                    ctx.setAutoTransitioner(autoTransitioner);
                     status = determineStatus(headers, event, ctx, result);
                 } else if (outcome.getResult() != null) {
                     status = determineStatus(headers, event, ctx, outcome.getResult());
@@ -647,6 +648,8 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel, Expressi
             boolean cacheable) {
         assert (status != null); // not a valid get command
 
+        AutoTransitioner autoTransitioner = (ctx != null ? ctx.getAutoTransitioner() : null);
+        
         // The key that this should be cached under, if any
         Object cacheKey = null;
         int cacheMaxAge = 0;
@@ -696,7 +699,7 @@ public class HTTPHypermediaRIM implements HTTPResourceInteractionModel, Expressi
             responseBuilder = HeaderHelper.allowHeader(responseBuilder, interactions);
         } else if (status.getFamily() == Response.Status.Family.SUCCESSFUL) {
             if (resource != null) {
-                if (resource.getLinks() != null && !resource.getLinks().isEmpty() && autoTransitioner != null && autoTransitioner.transition().isSuccessful()) {
+                if ((resource.getLinks() != null && !resource.getLinks().isEmpty()) && (autoTransitioner == null || (autoTransitioner != null && autoTransitioner.transition().isSuccessful()))) {
                     responseBuilder = setLocationHeader(responseBuilder, resource.getLinks().iterator().next().getHref(), ctx.getQueryParameters());
                 }
 
