@@ -119,6 +119,10 @@
 			<id>interaction-site</id>
 			<url>file://localhost/c:/temp/iris/site</url>
 		</site>
+		<repository>
+			<id>dev-azure-com-aphethean-private</id>
+			<url>https://pkgs.dev.azure.com/aphethean/_packaging/private/maven/v1</url>
+		</repository>
 	</distributionManagement>
 
 	<properties>
