@@ -411,10 +411,10 @@
 	</dependencyManagement>
 	
 	<repositories>
-        <!-- Repository to resolve the Eclipse Tycho dependencies -->
+        <!-- Repository to resolve the Eclipse Tycho dependencies --> 
 		<repository>
-			<id>p2.eclipse.oxygen</id>
-			<url>http://download.eclipse.org/releases/oxygen</url>
+			<id>p2.eclipse.neon</id>
+			<url>http://download.eclipse.org/releases/neon</url>
 			<layout>p2</layout>
 		</repository>
 		<!-- Repository to resolve the XText dependencies -->
