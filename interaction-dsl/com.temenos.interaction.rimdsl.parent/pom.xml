@@ -50,8 +50,8 @@
 
 	<distributionManagement>
 		<repository>
-			<id>nexus-t24-dev</id>
-			<url>http://maven.oams.com/content/repositories/t24-snapshots/</url>
+			<id>dev-azure-com-aphethean-private</id>
+			<url>https://pkgs.dev.azure.com/aphethean/_packaging/private/maven/v1</url>
 		</repository>
 	</distributionManagement>
 
@@ -454,7 +454,7 @@
         <!-- Repository to resolve the Eclipse Tycho dependencies --> 
 		<repository>
 			<id>p2.eclipse.neon</id>
-			<url>http://download.eclipse.org/releases/neon</url>
+			<url>https://download.eclipse.org/releases/neon/201705151400/</url>
 			<layout>p2</layout>
 		</repository>
 		<!-- Repository to resolve the XText dependencies -->
